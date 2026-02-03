@@ -19,13 +19,11 @@ def load_my_model():
     if not model_path.exists():
         return None
     try:
-        # Load the fitted and compressed model
-        return joblib.load(model.pkl)
+        # FIX: Change 'model.pkl' to 'model_path'
+        return joblib.load(model.pkl) 
     except Exception as e:
         st.error(f"Technical error during loading: {e}")
         return None
-
-model = load_my_model()
 
 # --- VALIDATION CHECK ---
 if model is None:
