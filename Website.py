@@ -12,7 +12,8 @@ st.markdown("Enter the network traffic metrics to analyze for threats.")
 
 # --- LOAD MODEL & PREPROCESSORS ---
 # Ensure you upload 'model.pkl', 'scaler.pkl', and 'label_encoder.pkl' to GitHub
-model_path = Path(model.pkl).parent / "model.pkl"
+# Option A: The most reliable way for Streamlit Cloud
+model_path = Path(__file__).parent / "model.pkl"
 
 @st.cache_resource
 def load_assets():
