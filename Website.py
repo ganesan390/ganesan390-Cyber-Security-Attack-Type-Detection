@@ -10,7 +10,7 @@ st.title("🛡️ Cyber Security Attack Type Detection")
 st.markdown("Enter network traffic metrics below to predict potential threats.")
 
 # --- INITIALIZE & LOAD MODEL ---
-model = None 
+# --- PATH SETUP ---
 current_dir = Path(__file__).parent
 model_path = current_dir / "model.pkl"
 
