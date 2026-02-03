@@ -16,7 +16,7 @@ def load_my_model():
         return None  # Return None so we can handle it gracefully below
     
     try:
-        loaded_model = joblib.load(model_path)
+        loaded_model = joblib.load(model.pkl)
         return loaded_model
     except Exception as e:
         st.error(f"⚠️ Technical error during loading: {e}")
