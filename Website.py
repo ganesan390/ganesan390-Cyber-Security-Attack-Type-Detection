@@ -20,7 +20,7 @@ def load_my_model():
         return None
     try:
         # Load the fitted and compressed model
-        return joblib.load(model_path)
+        return joblib.load(model.pkl)
     except Exception as e:
         st.error(f"Technical error during loading: {e}")
         return None
