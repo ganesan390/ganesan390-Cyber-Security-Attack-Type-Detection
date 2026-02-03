@@ -35,7 +35,7 @@ else:
     # ... rest of your code (the form, prediction logic, etc.)
 
 # --- INPUT UI ---
-if model:
+if model is not None:
     with st.form("prediction_form"):
         col1, col2, col3 = st.columns(3)
         
