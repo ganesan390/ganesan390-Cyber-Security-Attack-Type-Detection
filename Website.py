@@ -3,6 +3,34 @@ import joblib
 import pandas as pd
 from pathlib import Path
 
+# 1. INITIALIZE THE VARIABLE FIRST
+model = None 
+
+# 2. DEFINE PATHS
+current_dir = Path(__file__).parent
+model_path = current_dir / "model.pkl"
+
+# 3. DEFINE THE LOADING FUNCTION
+@st.cache_resource
+def load_my_model():
+    if not model_path.exists():
+        return None
+    try:
+        # Use the path variable, not the string 'model.pkl'
+        return joblib.load(model_path)
+    except Exception as e:
+        # This will catch and display errors without crashing the whole app
+        st.error(f"Technical error during loading: {e}")
+        return None
+
+# 4. ASSIGN THE MODEL
+model = load_my_model()
+
+# 5. NOW THE CHECK ON LINE 29 WILL WORK
+if model is None:
+    st.error("❌ **model.pkl** not found or could not be loaded.")
+    st.stop() # Prevents the rest of the app from running
+
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Cyber Attack Detector", layout="wide")
 
