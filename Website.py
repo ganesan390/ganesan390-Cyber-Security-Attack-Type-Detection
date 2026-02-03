@@ -20,7 +20,7 @@ def load_my_model():
         return None
     try:
         # Load the fitted and compressed model
-        return joblib.load(https://github.com/ganesan390/ganesan390-Cyber-Security-Attack-Type-Detection/blob/0747b7407584548ff9a83208a1c7a6f20c301356/model.pkl)
+        return joblib.load(model.pkl)
     except Exception as e:
         st.error(f"Technical error during loading: {e}")
         return None
