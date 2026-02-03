@@ -10,22 +10,41 @@ st.set_page_config(page_title="Cyber Attack Detector", layout="wide")
 st.title("🛡️ Cyber Security Attack Type Detection")
 st.markdown("Enter the network traffic metrics to analyze for threats.")
 
-# --- LOAD MODEL & PREPROCESSORS ---
-# Ensure you upload 'model.pkl', 'scaler.pkl', and 'label_encoder.pkl' to GitHub
-# Option A: The most reliable way for Streamlit Cloud
-model_path = Path(__file__).parent / "model.pkl"
+import streamlit as st
+import joblib
+import pandas as pd
+from pathlib import Path
 
+# 1. SETUP PATHS
+# Path(__file__).parent finds the folder where Website.py lives
+current_dir = Path(__file__).parent
+model_path = current_dir / "model.pkl"
+
+# 2. LOAD MODEL FUNCTION
 @st.cache_resource
-def load_assets():
+def load_my_model():
+    # Check if file exists first to avoid the 'Unbound' error
+    if not model_path.exists():
+        return None  # Return None so we can handle it gracefully below
+    
     try:
-        # We load the model trained in Colab
-        model = joblib.load(model.pkl)
-        return model
+        loaded_model = joblib.load(model_path)
+        return loaded_model
     except Exception as e:
-        st.error(f"Error loading model.pkl: {e}")
+        st.error(f"⚠️ Technical error during loading: {e}")
         return None
 
-model = load_assets()
+# 3. CALL THE FUNCTION
+model = load_my_model()
+
+# 4. CONDITIONAL UI
+if model is None:
+    st.error("❌ **model.pkl** not found or could not be loaded.")
+    st.info(f"Make sure **model.pkl** is uploaded to your GitHub in the same folder as this script. Expected location: `{model_path}`")
+    st.stop() # Stops the app here so it doesn't try to use 'model' later
+else:
+    st.success("✅ Model loaded successfully!")
+    # ... rest of your code (the form, prediction logic, etc.)
 
 # --- INPUT UI ---
 if model:
