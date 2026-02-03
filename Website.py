@@ -3,24 +3,34 @@ import joblib
 import pandas as pd
 from pathlib import Path
 
-# 1. SETUP PATHS
-# Path(__file__).parent finds the folder where Website.py lives
+# --- INITIALIZE VARIABLE ---
+# This prevents the "name 'model' is not defined" error
+model = None 
+
+# --- PATH SETUP ---
 current_dir = Path(__file__).parent
 model_path = current_dir / "model.pkl"
 
-# 2. LOAD MODEL FUNCTION
+# --- LOAD MODEL ---
 @st.cache_resource
 def load_my_model():
-    # Check if file exists first to avoid the 'Unbound' error
     if not model_path.exists():
-        return None  # Return None so we can handle it gracefully below
-    
-    try:
-        loaded_model = joblib.load(model.pkl)
-        return loaded_model
-    except Exception as e:
-        st.error(f"⚠️ Technical error during loading: {e}")
         return None
+    try:
+        # Load the fitted and compressed model
+        return joblib.load(model_path)
+    except Exception as e:
+        st.error(f"Technical error during loading: {e}")
+        return None
+
+# Now we assign the result to our variable
+model = load_my_model()
+
+# --- VALIDATION CHECK ---
+if model is None:
+    st.error("❌ **model.pkl** not found or could not be loaded.")
+    st.info(f"Expected location: `{model_path}`")
+    st.stop() # This kills the script here so it doesn't crash later
 
 # 3. CALL THE FUNCTION
 model = load_my_model()
