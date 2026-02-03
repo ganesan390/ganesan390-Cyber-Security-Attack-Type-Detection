@@ -1,18 +1,6 @@
 import streamlit as st
 import joblib
 import pandas as pd
-import numpy as np
-from pathlib import Path
-
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="Cyber Attack Detector", layout="wide")
-
-st.title("🛡️ Cyber Security Attack Type Detection")
-st.markdown("Enter the network traffic metrics to analyze for threats.")
-
-import streamlit as st
-import joblib
-import pandas as pd
 from pathlib import Path
 
 # 1. SETUP PATHS
