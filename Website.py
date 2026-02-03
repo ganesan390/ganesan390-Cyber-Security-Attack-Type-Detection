@@ -3,55 +3,31 @@ import joblib
 import pandas as pd
 from pathlib import Path
 
-# 1. INITIALIZE THE VARIABLE FIRST
-model = None 
-
-# 2. DEFINE PATHS
-current_dir = Path(__file__).parent
-model_path = current_dir / "model.pkl"
-
-# 3. DEFINE THE LOADING FUNCTION
-@st.cache_resource
-def load_my_model():
-    if not model_path.exists():
-        return None
-    try:
-        # Use the path variable, not the string 'model.pkl'
-        return joblib.load(model_path)
-    except Exception as e:
-        # This will catch and display errors without crashing the whole app
-        st.error(f"Technical error during loading: {e}")
-        return None
-
-# 4. ASSIGN THE MODEL
-model = load_my_model()
-
-# 5. NOW THE CHECK ON LINE 29 WILL WORK
-if model is None:
-    st.error("❌ **model.pkl** not found or could not be loaded.")
-    st.stop() # Prevents the rest of the app from running
-
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Cyber Attack Detector", layout="wide")
 
-st.title("🛡️ Cyber Security Attack Type Detection")
-st.markdown("Enter network traffic metrics below to predict potential threats.")
-
 # --- INITIALIZE & LOAD MODEL ---
-# --- PATH SETUP ---
+model = None 
 current_dir = Path(__file__).parent
 model_path = current_dir / "model.pkl"
 
 @st.cache_resource
-def load_my_model():
-    if not model_path.exists():
+def load_my_model(path):
+    if not path.exists():
         return None
     try:
-        # FIX: Change 'model.pkl' to 'model_path'
-        return joblib.load(model.pkl) 
+        # We use 'path' (the variable), not 'model.pkl' (the attribute)
+        return joblib.load(path)
     except Exception as e:
         st.error(f"Technical error during loading: {e}")
         return None
+
+# Load the model once
+model = load_my_model(model_path)
+
+# --- UI HEADER ---
+st.title("🛡️ Cyber Security Attack Type Detection")
+st.markdown("Enter network traffic metrics below to predict potential threats.")
 
 # --- VALIDATION CHECK ---
 if model is None:
@@ -86,7 +62,6 @@ with st.form("prediction_form"):
 
 # --- PREDICTION LOGIC ---
 if submit:
-    # 1. Map UI inputs to a dictionary
     ui_data = {
         "Source Port": [src_port],
         "Destination Port": [dest_port],
@@ -100,22 +75,22 @@ if submit:
     
     input_df = pd.DataFrame(ui_data)
 
-    # 2. FEATURE ALIGNMENT (The Fix for the 25 metrics)
-    # This automatically adds the missing 17 columns as 0s so the model doesn't crash
+    # FEATURE ALIGNMENT
+    # This loop uses the model's memory to fill in the other 17 columns
     for col in model.feature_names_in_:
         if col not in input_df.columns:
             input_df[col] = 0 
 
-    # 3. Ensure columns are in the EXACT order the model learned
+    # Reorder columns to match training set
     input_df = input_df[model.feature_names_in_]
 
     try:
-        # 4. Predict
         prediction = model.predict(input_df)
         
         st.divider()
         st.subheader("Analysis Result:")
         
+        # Check if prediction is an attack
         if str(prediction[0]).lower() != "normal":
             st.error(f"⚠️ **Threat Detected: {prediction[0]}**")
         else:
