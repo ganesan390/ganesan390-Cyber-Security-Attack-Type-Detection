@@ -12,13 +12,13 @@ st.markdown("Enter the network traffic metrics to analyze for threats.")
 
 # --- LOAD MODEL & PREPROCESSORS ---
 # Ensure you upload 'model.pkl', 'scaler.pkl', and 'label_encoder.pkl' to GitHub
-model_path = Path(__file__).parent / "model.pkl"
+model_path = Path(model.pkl).parent / "model.pkl"
 
 @st.cache_resource
 def load_assets():
     try:
         # We load the model trained in Colab
-        model = joblib.load(model_path)
+        model = joblib.load(model.pkl)
         return model
     except Exception as e:
         st.error(f"Error loading model.pkl: {e}")
