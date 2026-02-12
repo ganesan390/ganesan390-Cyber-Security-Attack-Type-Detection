@@ -108,51 +108,48 @@ if uploaded_file is not None:
                 col3.metric("Accuracy", f"{round(accuracy*100,2)}%")
 
                 st.markdown("---")
+   # =====================================================
+# REPORT + CONFUSION MATRIX
+# =====================================================
+col1, col2 = st.columns(2)
 
-                # =====================================================
-                # REPORT + CONFUSION MATRIX
-                # =====================================================
-                col1, col2 = st.columns(2)
+with col1:
+    st.subheader("📄 Classification Report")
 
-                with col1:
-                    st.subheader("📄 Classification Report")
-                   
-# Generate classification report as dictionary
-report_dict = classification_report(y_test, y_pred, output_dict=True)
+    # Generate classification report as dictionary
+    report_dict = classification_report(y_test, y_pred, output_dict=True)
 
-# Convert to DataFrame
-report_df = pd.DataFrame(report_dict).transpose()
+    # Convert to DataFrame
+    report_df = pd.DataFrame(report_dict).transpose()
 
-# Round values
-report_df = report_df.round(3)
+    # Round values
+    report_df = report_df.round(3)
 
-st.subheader("📄 Classification Report (Detailed Table)")
+    # Display styled dataframe
+    st.dataframe(
+        report_df.style
+        .background_gradient(cmap="Blues")
+        .set_properties(**{
+            "text-align": "center",
+            "font-size": "14px"
+        }),
+        use_container_width=True
+    )
 
-# Style the dataframe
-st.dataframe(
-    report_df.style
-    .background_gradient(cmap="Blues")
-    .set_properties(**{
-        "text-align": "center",
-        "font-size": "14px"
-    }),
-    use_container_width=True
-)
-st.markdown("### 📊 Overall Metrics")
+    st.markdown("### 📊 Overall Metrics")
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Precision (Avg)", round(report_df.loc["weighted avg", "precision"], 3))
-col2.metric("Recall (Avg)", round(report_df.loc["weighted avg", "recall"], 3))
-col3.metric("F1-Score (Avg)", round(report_df.loc["weighted avg", "f1-score"], 3))
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Precision (Avg)", round(report_df.loc["weighted avg", "precision"], 3))
+    m2.metric("Recall (Avg)", round(report_df.loc["weighted avg", "recall"], 3))
+    m3.metric("F1-Score (Avg)", round(report_df.loc["weighted avg", "f1-score"], 3))
 
+with col2:
+    st.subheader("📊 Confusion Matrix")
+    fig, ax = plt.subplots()
+    ConfusionMatrixDisplay.from_predictions(y_test, y_pred, ax=ax)
+    st.pyplot(fig)
 
-                with col2:
-                    st.subheader("📊 Confusion Matrix")
-                    fig, ax = plt.subplots()
-                    ConfusionMatrixDisplay.from_predictions(y_test, y_pred, ax=ax)
-                    st.pyplot(fig)
-
-                st.markdown("---")
+st.markdown("---")
 
                 # =====================================================
                 # FULL DATASET PREDICTION
