@@ -60,7 +60,8 @@ if uploaded_file is not None:
     # TARGET SELECTION
     # =====================================================
     st.subheader("🎯 Model Configuration")
-    target_column = st.selectbox("Select Target Column (Attack Type)", data.columns)
+    possible_targets = [col for col in data.columns if "label" in col.lower() or "attack" in col.lower() or "class" in col.lower()]
+    target_column = st.selectbox("Select Target Column", possible_targets if possible_targets else data.columns)
 
     if st.button("🚀 Train Model"):
         with st.spinner("Training model... Please wait ⏳"):
