@@ -66,7 +66,7 @@ if uploaded_file is not None:
 
     if st.button("🚀 Train Model"):
         with st.spinner("Training model... Please wait ⏳"):
-        try:
+            try:
             # ---------------------------
             # DATA PREP
             # ---------------------------
