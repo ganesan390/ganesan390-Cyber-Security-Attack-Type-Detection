@@ -27,4 +27,81 @@ if uploaded_file is not None:
     # =====================================================
     # TARGET SELECTION
     # =====================================================
-    target_column = st.selectbox("Select_
+    target_column = st.selectbox("Select Target Column (Attack Type)", data.columns)
+
+    if st.button("🚀 Train Model"):
+        try:
+            X = data.drop(columns=[target_column])
+            y = data[target_column]
+
+            # -------------------------------
+            # Handle categorical features
+            # -------------------------------
+            X = pd.get_dummies(X)  # Convert strings to numeric
+
+            # Encode target if categorical
+            if y.dtype == "object":
+                encoder = LabelEncoder()
+                y = encoder.fit_transform(y)
+
+            # -------------------------------
+            # Train-test split
+            # -------------------------------
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y,
+                test_size=0.2,
+                random_state=42
+            )
+
+            # -------------------------------
+            # Train model
+            # -------------------------------
+            model = RandomForestClassifier(n_estimators=200, random_state=42)
+            model.fit(X_train, y_train)
+
+            # -------------------------------
+            # Predictions on test set
+            # -------------------------------
+            y_pred = model.predict(X_test)
+
+            # -------------------------------
+            # Evaluation
+            # -------------------------------
+            accuracy = accuracy_score(y_test, y_pred)
+            st.success("✅ Model Training Completed")
+            st.write(f"### 🎯 Accuracy: {round(accuracy * 100, 2)}%")
+
+            st.subheader("📄 Classification Report")
+            st.text(classification_report(y_test, y_pred))
+
+            # -------------------------------
+            # Confusion Matrix
+            # -------------------------------
+            st.subheader("📊 Confusion Matrix")
+            fig, ax = plt.subplots()
+            ConfusionMatrixDisplay.from_predictions(y_test, y_pred, ax=ax)
+            st.pyplot(fig)
+
+            # -------------------------------
+            # Full dataset prediction
+            # -------------------------------
+            full_predictions = model.predict(X)
+            result_df = data.copy()
+            result_df["Predicted_Attack_Type"] = full_predictions
+
+            st.subheader("🧾 Prediction Results")
+            st.dataframe(result_df.head())
+
+            # -------------------------------
+            # Download results
+            # -------------------------------
+            csv_output = result_df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "📥 Download Prediction Results",
+                csv_output,
+                "attack_predictions.csv",
+                "text/csv"
+            )
+
+        except Exception as e:
+            st.error(f"Error: {e}")
