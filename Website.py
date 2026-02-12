@@ -1,87 +1,108 @@
 import streamlit as st
-import joblib
 import pandas as pd
-from pathlib import Path
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+from sklearn.preprocessing import LabelEncoder
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="Cyber Attack Detector", layout="wide")
+st.set_page_config(page_title="Cyber Attack Detection", layout="wide")
 
-# --- LOAD MODEL ---
-current_dir = Path(__file__).parent
-model_path = current_dir / "model.pkl"
+st.title("🛡️ Cyber Attack Detection Using Machine Learning")
+st.write("Upload a dataset to train a model and predict cyber attack types.")
 
-@st.cache_resource
-def load_model(path):
-    if not path.exists():
-        return None
-    try:
-        return joblib.load(path)
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-        return None
+# =====================================================
+# FILE UPLOAD
+# =====================================================
 
-model = load_model(model_path)
-
-# --- UI HEADER ---
-st.title("🛡️ Cyber Security Attack Type Detection")
-st.markdown("Upload a CSV file containing network traffic data to detect cyber attacks.")
-
-# --- MODEL CHECK ---
-if model is None:
-    st.error("❌ model.pkl not found or failed to load.")
-    st.info(f"Ensure model.pkl is in this folder:\n{model_path}")
-    st.stop()
-else:
-    st.success("✅ Model loaded successfully!")
-
-# =========================================================
-# 📁 CSV UPLOAD SECTION (ONLY INPUT METHOD)
-# =========================================================
-
-st.divider()
-st.subheader("📁 Upload Network Traffic CSV File")
-
-uploaded_file = st.file_uploader(
-    "Upload your CSV file",
-    type=["csv"]
-)
+uploaded_file = st.file_uploader("Upload CSV Dataset", type=["csv"])
 
 if uploaded_file is not None:
-    try:
-        # Read CSV
-        data = pd.read_csv(uploaded_file)
 
-        st.write("### 📊 Uploaded Data Preview")
-        st.dataframe(data.head())
+    data = pd.read_csv(uploaded_file)
 
-        # --- FEATURE ALIGNMENT ---
-        for col in model.feature_names_in_:
-            if col not in data.columns:
-                data[col] = 0
+    st.subheader("📊 Dataset Preview")
+    st.dataframe(data.head())
 
-        # Reorder columns to match training
-        data = data[model.feature_names_in_]
+    st.write("Dataset Shape:", data.shape)
 
-        # --- PREDICTION ---
-        predictions = model.predict(data)
+    # =====================================================
+    # TARGET SELECTION
+    # =====================================================
 
-        # Add predictions column
-        data["Prediction"] = predictions
+    target_column = st.selectbox("Select Target Column (Attack Type)", data.columns)
 
-        st.success("✅ Prediction Completed Successfully!")
+    if st.button("🚀 Train Model"):
 
-        st.write("### 🧾 Prediction Results")
-        st.dataframe(data.head())
+        try:
+            X = data.drop(columns=[target_column])
+            y = data[target_column]
 
-        # --- DOWNLOAD BUTTON ---
-        csv_output = data.to_csv(index=False).encode("utf-8")
+            # Encode target if categorical
+            if y.dtype == "object":
+                encoder = LabelEncoder()
+                y = encoder.fit_transform(y)
 
-        st.download_button(
-            label="📥 Download Full Prediction Results",
-            data=csv_output,
-            file_name="cyber_attack_predictions.csv",
-            mime="text/csv"
-        )
+            # Train-test split
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y,
+                test_size=0.2,
+                random_state=42
+            )
 
-    except Exception as e:
-        st.error(f"❌ Error processing file: {e}")
+            # Train model
+            model = RandomForestClassifier(n_estimators=200, random_state=42)
+            model.fit(X_train, y_train)
+
+            # Predictions
+            y_pred = model.predict(X_test)
+
+            # =====================================================
+            # EVALUATION
+            # =====================================================
+
+            accuracy = accuracy_score(y_test, y_pred)
+
+            st.success("✅ Model Training Completed")
+            st.write(f"### 🎯 Accuracy: {round(accuracy * 100, 2)}%")
+
+            st.subheader("📄 Classification Report")
+            st.text(classification_report(y_test, y_pred))
+
+            # =====================================================
+            # CONFUSION MATRIX
+            # =====================================================
+
+            st.subheader("📊 Confusion Matrix")
+
+            fig, ax = plt.subplots()
+            ConfusionMatrixDisplay.from_predictions(y_test, y_pred, ax=ax)
+            st.pyplot(fig)
+
+            # =====================================================
+            # FULL DATASET PREDICTION
+            # =====================================================
+
+            full_predictions = model.predict(X)
+
+            result_df = data.copy()
+            result_df["Predicted_Attack_Type"] = full_predictions
+
+            st.subheader("🧾 Prediction Results")
+            st.dataframe(result_df.head())
+
+            # =====================================================
+            # DOWNLOAD RESULTS
+            # =====================================================
+
+            csv_output = result_df.to_csv(index=False).encode("utf-8")
+
+            st.download_button(
+                "📥 Download Prediction Results",
+                csv_output,
+                "attack_predictions.csv",
+                "text/csv"
+            )
+
+        except Exception as e:
+            st.error(f"Error: {e}")
