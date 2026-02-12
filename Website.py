@@ -65,7 +65,7 @@ if uploaded_file is not None:
     target_column = st.selectbox("Select Target Column", possible_targets if possible_targets else data.columns)
 
     if st.button("🚀 Train Model"):
-    with st.spinner("Training model... Please wait ⏳"):
+        with st.spinner("Training model... Please wait ⏳"):
         try:
             # ---------------------------
             # DATA PREP
