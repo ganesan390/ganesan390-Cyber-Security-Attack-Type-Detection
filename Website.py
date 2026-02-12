@@ -67,83 +67,93 @@ if uploaded_file is not None:
     if st.button("🚀 Train Model"):
         with st.spinner("Training model... Please wait ⏳"):
             try:
-            # ---------------------------
-            # DATA PREP
-            # ---------------------------
-            X = data.drop(columns=[target_column])
-            y = data[target_column]
+                # ---------------------------
+                # DATA PREP
+                # ---------------------------
+                X = data.drop(columns=[target_column])
+                y = data[target_column]
 
-            X = pd.get_dummies(X)
-            if y.dtype == "object":
-                encoder = LabelEncoder()
-                y = encoder.fit_transform(y)
+                X = pd.get_dummies(X)
+                if y.dtype == "object":
+                    encoder = LabelEncoder()
+                    y = encoder.fit_transform(y)
 
-            # ---------------------------
-            # SPLIT DATA
-            # ---------------------------
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42
-            )
-
-            # ---------------------------
-            # TRAIN MODEL
-            # ---------------------------
-            model = RandomForestClassifier(n_estimators=200, random_state=42)
-            model.fit(X_train, y_train)
-
-            y_pred = model.predict(X_test)
-            accuracy = accuracy_score(y_test, y_pred)
-            st.success(f"✅ Model Training Completed! Accuracy: {round(accuracy*100,2)}%")
-
-            # ---------------------------
-            # CLASSIFICATION REPORT + CONFUSION MATRIX
-            # ---------------------------
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.subheader("📄 Classification Report")
-                report_dict = classification_report(y_test, y_pred, output_dict=True)
-                report_df = pd.DataFrame(report_dict).transpose().round(3)
-                st.dataframe(
-                    report_df.style
-                    .background_gradient(cmap="Blues")
-                    .set_properties(**{"text-align": "center", "font-size": "14px"}),
-                    use_container_width=True
+                # ---------------------------
+                # SPLIT DATA
+                # ---------------------------
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=0.2, random_state=42
                 )
-                st.markdown("### 📊 Overall Metrics")
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Precision (Avg)", round(report_df.loc["weighted avg", "precision"], 3))
-                m2.metric("Recall (Avg)", round(report_df.loc["weighted avg", "recall"], 3))
-                m3.metric("F1-Score (Avg)", round(report_df.loc["weighted avg", "f1-score"], 3))
 
-            with col2:
-                st.subheader("📊 Confusion Matrix")
-                fig, ax = plt.subplots()
-                ConfusionMatrixDisplay.from_predictions(y_test, y_pred, ax=ax)
-                st.pyplot(fig)
+                # ---------------------------
+                # TRAIN MODEL
+                # ---------------------------
+                model = RandomForestClassifier(n_estimators=200, random_state=42)
+                model.fit(X_train, y_train)
 
-            st.markdown("---")
+                y_pred = model.predict(X_test)
+                accuracy = accuracy_score(y_test, y_pred)
+                st.success(f"✅ Model Training Completed! Accuracy: {round(accuracy*100,2)}%")
 
-            # ---------------------------
-            # FULL DATASET PREDICTION
-            # ---------------------------
-            full_predictions = model.predict(X)
-            result_df = data.copy()
-            result_df["Predicted_Attack_Type"] = full_predictions
+                # ---------------------------
+                # METRICS DISPLAY
+                # ---------------------------
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Model", "Random Forest")
+                col2.metric("Test Size", "20%")
+                col3.metric("Accuracy", f"{round(accuracy*100,2)}%")
 
-            st.subheader("🧾 Sample Prediction Results")
-            st.dataframe(result_df.head())
+                st.markdown("---")
 
-            csv_output = result_df.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "📥 Download Full Prediction Results",
-                csv_output,
-                "attack_predictions.csv",
-                "text/csv"
-            )
+                # ---------------------------
+                # CLASSIFICATION REPORT + CONFUSION MATRIX
+                # ---------------------------
+                col1, col2 = st.columns(2)
 
-        except Exception as e:
-            st.error(f"Error: {e}")
+                with col1:
+                    st.subheader("📄 Classification Report")
+                    report_dict = classification_report(y_test, y_pred, output_dict=True)
+                    report_df = pd.DataFrame(report_dict).transpose().round(3)
+                    st.dataframe(
+                        report_df.style
+                        .background_gradient(cmap="Blues")
+                        .set_properties(**{"text-align": "center", "font-size": "14px"}),
+                        use_container_width=True
+                    )
+                    st.markdown("### 📊 Overall Metrics")
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Precision (Avg)", round(report_df.loc["weighted avg", "precision"], 3))
+                    m2.metric("Recall (Avg)", round(report_df.loc["weighted avg", "recall"], 3))
+                    m3.metric("F1-Score (Avg)", round(report_df.loc["weighted avg", "f1-score"], 3))
+
+                with col2:
+                    st.subheader("📊 Confusion Matrix")
+                    fig, ax = plt.subplots()
+                    ConfusionMatrixDisplay.from_predictions(y_test, y_pred, ax=ax)
+                    st.pyplot(fig)
+
+                st.markdown("---")
+
+                # ---------------------------
+                # FULL DATASET PREDICTION
+                # ---------------------------
+                full_predictions = model.predict(X)
+                result_df = data.copy()
+                result_df["Predicted_Attack_Type"] = full_predictions
+
+                st.subheader("🧾 Sample Prediction Results")
+                st.dataframe(result_df.head())
+
+                csv_output = result_df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "📥 Download Full Prediction Results",
+                    csv_output,
+                    "attack_predictions.csv",
+                    "text/csv"
+                )
+
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 # =====================================================
 # FOOTER
