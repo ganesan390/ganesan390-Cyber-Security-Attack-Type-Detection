@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import seaborn as sns  # optional but useful
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -115,7 +116,35 @@ if uploaded_file is not None:
 
                 with col1:
                     st.subheader("📄 Classification Report")
-                    st.text(classification_report(y_test, y_pred))
+                   
+# Generate classification report as dictionary
+report_dict = classification_report(y_test, y_pred, output_dict=True)
+
+# Convert to DataFrame
+report_df = pd.DataFrame(report_dict).transpose()
+
+# Round values
+report_df = report_df.round(3)
+
+st.subheader("📄 Classification Report (Detailed Table)")
+
+# Style the dataframe
+st.dataframe(
+    report_df.style
+    .background_gradient(cmap="Blues")
+    .set_properties(**{
+        "text-align": "center",
+        "font-size": "14px"
+    }),
+    use_container_width=True
+)
+st.markdown("### 📊 Overall Metrics")
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Precision (Avg)", round(report_df.loc["weighted avg", "precision"], 3))
+col2.metric("Recall (Avg)", round(report_df.loc["weighted avg", "recall"], 3))
+col3.metric("F1-Score (Avg)", round(report_df.loc["weighted avg", "f1-score"], 3))
+
 
                 with col2:
                     st.subheader("📊 Confusion Matrix")
