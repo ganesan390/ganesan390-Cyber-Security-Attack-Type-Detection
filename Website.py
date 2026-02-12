@@ -68,7 +68,7 @@ if uploaded_file is not None:
     with st.spinner("Training model... Please wait ⏳"):
         try:
             # ---------------------------
-            # TRAINING
+            # DATA PREP
             # ---------------------------
             X = data.drop(columns=[target_column])
             y = data[target_column]
@@ -78,26 +78,22 @@ if uploaded_file is not None:
                 encoder = LabelEncoder()
                 y = encoder.fit_transform(y)
 
+            # ---------------------------
+            # SPLIT DATA
+            # ---------------------------
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=0.2, random_state=42
             )
 
+            # ---------------------------
+            # TRAIN MODEL
+            # ---------------------------
             model = RandomForestClassifier(n_estimators=200, random_state=42)
             model.fit(X_train, y_train)
+
             y_pred = model.predict(X_test)
-
             accuracy = accuracy_score(y_test, y_pred)
-            st.success("✅ Model Training Completed Successfully!")
-
-            # ---------------------------
-            # METRICS DISPLAY
-            # ---------------------------
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Model", "Random Forest")
-            col2.metric("Test Size", "20%")
-            col3.metric("Accuracy", f"{round(accuracy*100,2)}%")
-
-            st.markdown("---")
+            st.success(f"✅ Model Training Completed! Accuracy: {round(accuracy*100,2)}%")
 
             # ---------------------------
             # CLASSIFICATION REPORT + CONFUSION MATRIX
@@ -134,6 +130,7 @@ if uploaded_file is not None:
             full_predictions = model.predict(X)
             result_df = data.copy()
             result_df["Predicted_Attack_Type"] = full_predictions
+
             st.subheader("🧾 Sample Prediction Results")
             st.dataframe(result_df.head())
 
@@ -148,34 +145,12 @@ if uploaded_file is not None:
         except Exception as e:
             st.error(f"Error: {e}")
 
-                # =====================================================
-                # FULL DATASET PREDICTION
-                # =====================================================
-                full_predictions = model.predict(X)
-                result_df = data.copy()
-                result_df["Predicted_Attack_Type"] = full_predictions
-
-                st.subheader("🧾 Sample Prediction Results")
-                st.dataframe(result_df.head())
-
-                # Download button
-                csv_output = result_df.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    "📥 Download Full Prediction Results",
-                    csv_output,
-                    "attack_predictions.csv",
-                    "text/csv"
-                )
-
-            except Exception as e:
-                st.error(f"Error: {e}")
-
 # =====================================================
 # FOOTER
 # =====================================================
 st.markdown("""
 <hr>
 <p style='text-align: center; font-size:14px;'>
-Cyber Security Attack Detection System | Built with Streamlit 🚀
+Cyber Security Attack Detection System
 </p>
 """, unsafe_allow_html=True)
