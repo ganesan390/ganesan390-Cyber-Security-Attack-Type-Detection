@@ -6,96 +6,82 @@ from pathlib import Path
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="Cyber Attack Detector", layout="wide")
 
-# --- INITIALIZE & LOAD MODEL ---
-model = None 
+# --- LOAD MODEL ---
 current_dir = Path(__file__).parent
 model_path = current_dir / "model.pkl"
 
 @st.cache_resource
-def load_my_model(path):
+def load_model(path):
     if not path.exists():
         return None
     try:
-        # We use 'path' (the variable), not 'model.pkl' (the attribute)
         return joblib.load(path)
     except Exception as e:
-        st.error(f"Technical error during loading: {e}")
+        st.error(f"Error loading model: {e}")
         return None
 
-# Load the model once
-model = load_my_model(model_path)
+model = load_model(model_path)
 
 # --- UI HEADER ---
 st.title("🛡️ Cyber Security Attack Type Detection")
-st.markdown("Enter network traffic metrics below to predict potential threats.")
+st.markdown("Upload a CSV file containing network traffic data to detect cyber attacks.")
 
-# --- VALIDATION CHECK ---
+# --- MODEL CHECK ---
 if model is None:
-    st.error("❌ **model.pkl** not found or could not be loaded.")
-    st.info(f"Make sure **model.pkl** is uploaded to your GitHub in the same folder as this script. Expected location: `{model_path}`")
-    st.stop() 
+    st.error("❌ model.pkl not found or failed to load.")
+    st.info(f"Ensure model.pkl is in this folder:\n{model_path}")
+    st.stop()
 else:
     st.success("✅ Model loaded successfully!")
 
-# --- INPUT UI ---
-with st.form("prediction_form"):
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.subheader("Network Info")
-        src_port = st.number_input("Source Port", 0, 65535, 80)
-        dest_port = st.number_input("Destination Port", 0, 65535, 443)
-        protocol = st.selectbox("Protocol", [0, 1, 2, 3], format_func=lambda x: ["TCP", "UDP", "ICMP", "HTTP"][x])
+# =========================================================
+# 📁 CSV UPLOAD SECTION (ONLY INPUT METHOD)
+# =========================================================
 
-    with col2:
-        st.subheader("Traffic Metrics")
-        pkt_len = st.number_input("Packet Length", 0, 65535, 512)
-        traffic_type = st.selectbox("Traffic Type", [0, 1], format_func=lambda x: ["Inbound", "Outbound"][x])
-        anomaly_score = st.slider("Anomaly Score", 0.0, 100.0, 10.0)
+st.divider()
+st.subheader("📁 Upload Network Traffic CSV File")
 
-    with col3:
-        st.subheader("Security Indicators")
-        severity = st.selectbox("Severity Level", [0, 1, 2, 3], format_func=lambda x: ["Low", "Medium", "High", "Critical"][x])
-        malware_ind = st.selectbox("Malware Indicators", [0, 1], format_func=lambda x: ["None", "Detected"][x])
-        
-    submit = st.form_submit_button("Analyze Traffic")
+uploaded_file = st.file_uploader(
+    "Upload your CSV file",
+    type=["csv"]
+)
 
-# --- PREDICTION LOGIC ---
-if submit:
-    ui_data = {
-        "Source Port": [src_port],
-        "Destination Port": [dest_port],
-        "Protocol": [protocol],
-        "Packet Length": [pkt_len],
-        "Traffic Type": [traffic_type],
-        "Anomaly Scores": [anomaly_score],
-        "Severity Level": [severity],
-        "Malware Indicators": [malware_ind]
-    }
-    
-    input_df = pd.DataFrame(ui_data)
-
-    # FEATURE ALIGNMENT
-    # This loop uses the model's memory to fill in the other 17 columns
-    for col in model.feature_names_in_:
-        if col not in input_df.columns:
-            input_df[col] = 0 
-
-    # Reorder columns to match training set
-    input_df = input_df[model.feature_names_in_]
-
+if uploaded_file is not None:
     try:
-        prediction = model.predict(input_df)
-        
-        st.divider()
-        st.subheader("Analysis Result:")
-        
-        # Check if prediction is an attack
-        if str(prediction[0]).lower() != "normal":
-            st.error(f"⚠️ **Threat Detected: {prediction[0]}**")
-        else:
-            st.balloons()
-            st.success(f"✅ **Traffic is Normal**")
-            
+        # Read CSV
+        data = pd.read_csv(uploaded_file)
+
+        st.write("### 📊 Uploaded Data Preview")
+        st.dataframe(data.head())
+
+        # --- FEATURE ALIGNMENT ---
+        for col in model.feature_names_in_:
+            if col not in data.columns:
+                data[col] = 0
+
+        # Reorder columns to match training
+        data = data[model.feature_names_in_]
+
+        # --- PREDICTION ---
+        predictions = model.predict(data)
+
+        # Add predictions column
+        data["Prediction"] = predictions
+
+        st.success("✅ Prediction Completed Successfully!")
+
+        st.write("### 🧾 Prediction Results")
+        st.dataframe(data.head())
+
+        # --- DOWNLOAD BUTTON ---
+        csv_output = data.to_csv(index=False).encode("utf-8")
+
+        st.download_button(
+            label="📥 Download Full Prediction Results",
+            data=csv_output,
+            file_name="cyber_attack_predictions.csv",
+            mime="text/csv"
+        )
+
     except Exception as e:
-        st.error(f"Prediction Error: {e}")
+        st.error(f"❌ Error processing file: {e}")
