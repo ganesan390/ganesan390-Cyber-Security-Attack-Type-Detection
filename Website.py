@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import joblib
 import plotly.express as px
+from collections import Counter
 
 # ======================================
-# PAGE CONFIG (DASHBOARD STYLE)
+# PAGE CONFIG
 # ======================================
 st.set_page_config(
     page_title="Cyber Attack Dashboard",
@@ -96,18 +97,38 @@ if uploaded_file is not None:
 
         st.success("✅ Prediction Completed!")
 
+        # ===== FINAL ATTACK TYPE (MAJORITY) =====
+        attack_counts = Counter(predictions)
+        final_attack = attack_counts.most_common(1)[0][0]
+
+        st.markdown("---")
+        st.subheader("🛡️ Final Attack Result")
+
+        st.markdown(
+            f"""
+            <div style="
+                padding: 25px;
+                border-radius: 12px;
+                background-color: #fff4f4;
+                border: 2px solid #ff4d4d;
+                text-align: center;
+            ">
+            <h2 style="color: #ff4d4d;">🚨 Final Detected Attack Type</h2>
+            <h1>{final_attack}</h1>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
         # ===== DASHBOARD RESULTS =====
-        st.subheader("🛡️ Prediction Dashboard")
+        st.subheader("Prediction Details")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("### Prediction Results")
             st.dataframe(data.head(), use_container_width=True)
 
         with col2:
-            st.markdown("### Attack Distribution (Predicted)")
-
             fig2 = px.pie(
                 data,
                 names="Predicted_Attack_Type",
