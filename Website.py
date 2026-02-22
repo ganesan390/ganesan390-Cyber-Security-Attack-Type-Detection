@@ -82,23 +82,23 @@ if uploaded_file is not None:
     # Align columns (important if model trained previously)
     X = X.reindex(columns=X_train.columns, fill_value=0)
 
-# ==========================
-# PREDICT BUTTON
-# ==========================
-if st.button("🚀 Predict Attack Type"):
-
-    predictions = best_model.predict(X)
-
-    result_df = data.copy()
-    result_df["Predicted_Attack_Type"] = predictions
-
-    st.success("✅ Prediction Completed!")
-
-    st.subheader("🛡️ Prediction Results")
-    st.dataframe(result_df.head())
-
-    # Show first prediction clearly
-    first_prediction = predictions[0]
+    # ==========================
+    # PREDICT BUTTON
+    # ==========================
+    if st.button("🚀 Predict Attack Type"):
+    
+        predictions = best_model.predict(X)
+    
+        result_df = data.copy()
+        result_df["Predicted_Attack_Type"] = predictions
+    
+        st.success("✅ Prediction Completed!")
+    
+        st.subheader("🛡️ Prediction Results")
+        st.dataframe(result_df.head())
+    
+        # Show first prediction clearly
+        first_prediction = predictions[0]
 
     if label_map:
         first_prediction = label_map[first_prediction]
