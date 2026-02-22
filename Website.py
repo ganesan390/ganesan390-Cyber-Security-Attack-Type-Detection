@@ -2,10 +2,13 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
+
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
-from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.pipeline import Pipeline
 
 # =====================================================
 # PAGE CONFIG
@@ -24,7 +27,7 @@ st.markdown("""
     🛡️ Cyber Attack Detection Dashboard
     </h1>
     <p style='text-align: center; font-size:18px;'>
-    Machine Learning based Attack Type Classification
+    Machine Learning based Attack Type Classification (Logistic Regression)
     </p>
     <hr>
 """, unsafe_allow_html=True)
@@ -36,7 +39,7 @@ st.sidebar.header("⚙️ Configuration")
 uploaded_file = st.sidebar.file_uploader("📂 Upload CSV Dataset", type=["csv"])
 
 st.sidebar.markdown("---")
-st.sidebar.info("Developed using Random Forest Classifier")
+st.sidebar.info("Developed using Logistic Regression + GridSearchCV")
 
 # =====================================================
 # MAIN CONTENT
@@ -65,48 +68,83 @@ if uploaded_file is not None:
     target_column = st.selectbox("Select Target Column", possible_targets if possible_targets else data.columns)
 
     if st.button("🚀 Train Model"):
-        with st.spinner("Training model... Please wait ⏳"):
+        with st.spinner("Training Logistic Regression model... ⏳"):
             try:
                 # ---------------------------
-                # DATA PREP
+                # DATA PREPARATION
                 # ---------------------------
                 X = data.drop(columns=[target_column])
                 y = data[target_column]
 
+                # One-hot encode categorical features
                 X = pd.get_dummies(X)
+
+                # Encode target if categorical
                 if y.dtype == "object":
                     encoder = LabelEncoder()
                     y = encoder.fit_transform(y)
 
                 # ---------------------------
-                # SPLIT DATA
+                # TRAIN TEST SPLIT (Stratified)
                 # ---------------------------
                 X_train, X_test, y_train, y_test = train_test_split(
-                    X, y, test_size=0.2, random_state=42
+                    X, y,
+                    test_size=0.2,
+                    random_state=42,
+                    stratify=y
                 )
 
                 # ---------------------------
-                # TRAIN MODEL
+                # PIPELINE + GRID SEARCH
                 # ---------------------------
-                model = RandomForestClassifier(n_estimators=200, random_state=42)
-                model.fit(X_train, y_train)
+                pipeline = Pipeline([
+                    ("scaler", StandardScaler()),
+                    ("logreg", LogisticRegression(max_iter=2000))
+                ])
 
-                y_pred = model.predict(X_test)
+                param_grid = {
+                    "logreg__C": [0.01, 0.1, 1, 10],
+                    "logreg__penalty": ["l2"],
+                    "logreg__solver": ["lbfgs"]
+                }
+
+                grid = GridSearchCV(
+                    pipeline,
+                    param_grid,
+                    cv=5,
+                    scoring="f1_macro",
+                    n_jobs=-1
+                )
+
+                grid.fit(X_train, y_train)
+
+                best_model = grid.best_estimator_
+
+                # ---------------------------
+                # EVALUATION
+                # ---------------------------
+                y_pred = best_model.predict(X_test)
+
                 accuracy = accuracy_score(y_test, y_pred)
-                st.success(f"✅ Model Training Completed! Accuracy: {round(accuracy*100,2)}%")
+                f1 = f1_score(y_test, y_pred, average="macro")
+                precision = precision_score(y_test, y_pred, average="macro")
+                recall = recall_score(y_test, y_pred, average="macro")
+
+                st.success(f"✅ Model Training Completed! F1-Macro: {round(f1,4)}")
 
                 # ---------------------------
                 # METRICS DISPLAY
                 # ---------------------------
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Model", "Random Forest")
-                col2.metric("Test Size", "20%")
-                col3.metric("Accuracy", f"{round(accuracy*100,2)}%")
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Model", "Logistic Regression")
+                col2.metric("Accuracy", f"{round(accuracy*100,2)}%")
+                col3.metric("F1-Macro", round(f1,4))
+                col4.metric("Precision (Macro)", round(precision,4))
 
                 st.markdown("---")
 
                 # ---------------------------
-                # CLASSIFICATION REPORT + CONFUSION MATRIX
+                # CLASSIFICATION REPORT
                 # ---------------------------
                 col1, col2 = st.columns(2)
 
@@ -114,17 +152,7 @@ if uploaded_file is not None:
                     st.subheader("📄 Classification Report")
                     report_dict = classification_report(y_test, y_pred, output_dict=True)
                     report_df = pd.DataFrame(report_dict).transpose().round(3)
-                    st.dataframe(
-                        report_df.style
-                        .background_gradient(cmap="Blues")
-                        .set_properties(**{"text-align": "center", "font-size": "14px"}),
-                        use_container_width=True
-                    )
-                    st.markdown("### 📊 Overall Metrics")
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric("Precision (Avg)", round(report_df.loc["weighted avg", "precision"], 3))
-                    m2.metric("Recall (Avg)", round(report_df.loc["weighted avg", "recall"], 3))
-                    m3.metric("F1-Score (Avg)", round(report_df.loc["weighted avg", "f1-score"], 3))
+                    st.dataframe(report_df, use_container_width=True)
 
                 with col2:
                     st.subheader("📊 Confusion Matrix")
@@ -137,7 +165,7 @@ if uploaded_file is not None:
                 # ---------------------------
                 # FULL DATASET PREDICTION
                 # ---------------------------
-                full_predictions = model.predict(X)
+                full_predictions = best_model.predict(X)
                 result_df = data.copy()
                 result_df["Predicted_Attack_Type"] = full_predictions
 
@@ -161,6 +189,6 @@ if uploaded_file is not None:
 st.markdown("""
 <hr>
 <p style='text-align: center; font-size:14px;'>
-Cyber Security Attack Detection System
+Cyber Security Attack Detection System - Logistic Regression Model
 </p>
 """, unsafe_allow_html=True)
