@@ -98,12 +98,15 @@ if uploaded_file is not None:
         st.success("✅ Prediction Completed!")
 
         # ===== FINAL ATTACK TYPE (MAJORITY) =====
+        from collections import Counter
+        
         attack_counts = Counter(predictions)
         final_attack = attack_counts.most_common(1)[0][0]
-
+        
         st.markdown("---")
-        st.subheader("🛡️ Final Attack Result")
-
+        
+        st.subheader("🛡️ Final Detection Result")
+        
         st.markdown(
             f"""
             <div style="
@@ -115,11 +118,11 @@ if uploaded_file is not None:
             ">
             <h2 style="color: #ff4d4d;">🚨 Final Detected Attack Type</h2>
             <h1>{final_attack}</h1>
+            <p style="font-size:16px;">Predicted based on majority of rows</p>
             </div>
             """,
             unsafe_allow_html=True
         )
-
         # ===== DASHBOARD RESULTS =====
         st.subheader("Prediction Details")
 
