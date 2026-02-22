@@ -59,17 +59,52 @@ if uploaded_file is not None:
         st.write("Columns:", data.shape[1])
 
     st.markdown("---")
+    # ==========================
+    # LOAD DATA
+    # ==========================
+    data = pd.read_csv(uploaded_file)
+    
+    st.subheader("📊 Uploaded Dataset Preview")
+    st.dataframe(data.head())
+    
+    # ==========================
+    # PREPARE FEATURES
+    # ==========================
+    
+    # Remove target column if it exists
+    if "Attack Type" in data.columns:
+        X = data.drop(columns=["Attack Type"])
+    else:
+        X = data.copy()
+    
+    X = pd.get_dummies(X)
+    
+    # Align columns (important if model trained previously)
+    X = X.reindex(columns=X_train.columns, fill_value=0)
 
-    # =====================================================
-    # TARGET SELECTION
-    # =====================================================
-    st.subheader("🎯 Model Configuration")
-    possible_targets = [col for col in data.columns if "label" in col.lower() or "attack" in col.lower() or "class" in col.lower()]
-    target_column = st.selectbox("Select Target Column", possible_targets if possible_targets else data.columns)
+# ==========================
+# PREDICT BUTTON
+# ==========================
+if st.button("🚀 Predict Attack Type"):
 
-    if st.button("🚀 Train Model"):
-        with st.spinner("Training Logistic Regression model... ⏳"):
-            try:
+    predictions = best_model.predict(X)
+
+    result_df = data.copy()
+    result_df["Predicted_Attack_Type"] = predictions
+
+    st.success("✅ Prediction Completed!")
+
+    st.subheader("🛡️ Prediction Results")
+    st.dataframe(result_df.head())
+
+    # Show first prediction clearly
+    first_prediction = predictions[0]
+
+    if label_map:
+        first_prediction = label_map[first_prediction]
+
+    st.markdown("---")
+    st.markdown(f"## 🚨 Predicted Attack Type: **{first_prediction}**")
                 # ---------------------------
                 # DATA PREPARATION
                 # ---------------------------
