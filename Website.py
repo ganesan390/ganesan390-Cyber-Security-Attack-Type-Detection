@@ -50,9 +50,17 @@ if uploaded_file is not None:
         predictions = model.predict(X)
 
         # Decode labels if encoder exists
+        # Decode if LabelEncoder exists
         if encoder:
             predictions = encoder.inverse_transform(predictions)
-
+        else:
+            # manual mapping
+            label_map = {
+                0: "Malware",
+                1: "DDoS",
+                2: "Intrusion"
+            }
+            predictions = [label_map.get(int(p), str(p)) for p in predictions]
         # Add prediction column
         data["Predicted_Attack_Type"] = predictions
 
