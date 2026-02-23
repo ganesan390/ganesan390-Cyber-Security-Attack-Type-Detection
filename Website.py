@@ -23,6 +23,13 @@ with st.sidebar:
     """)
     st.info("AI-based Cyber Attack Detection")
 
+    # CSV Upload in Sidebar
+    uploaded_file = st.file_uploader(
+        "📂 Upload CSV File",
+        type=["csv"],
+        help="Upload network traffic dataset"
+    )
+
 # ===== HEADER =====
 st.title("Cyber Attack Detection Dashboard")
 st.markdown("Analyze network data and detect security threats.")
@@ -36,14 +43,8 @@ model_columns = joblib.load("model_columns.pkl")
 encoder = joblib.load("label_encoder.pkl")
 
 # ======================================
-# FILE UPLOAD
+# PROCESS FILE ONLY IF UPLOADED
 # ======================================
-uploaded_file = st.file_uploader(
-    "📂 Upload CSV File",
-    type=["csv"],
-    help="Upload network traffic dataset"
-)
-
 if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
 
@@ -98,15 +99,13 @@ if uploaded_file is not None:
         st.success("✅ Prediction Completed!")
 
         # ===== FINAL ATTACK TYPE (MAJORITY) =====
-        from collections import Counter
-        
         attack_counts = Counter(predictions)
         final_attack = attack_counts.most_common(1)[0][0]
-        
+
         st.markdown("---")
-        
+
         st.subheader("🛡️ Final Detection Result")
-        
+
         st.markdown(
             f"""
             <div style="
@@ -123,6 +122,7 @@ if uploaded_file is not None:
             """,
             unsafe_allow_html=True
         )
+
         # ===== DASHBOARD RESULTS =====
         st.subheader("Prediction Details")
 
@@ -149,3 +149,6 @@ if uploaded_file is not None:
             mime="text/csv",
             use_container_width=True
         )
+
+else:
+    st.info("📂 Please upload a CSV file from the sidebar to start analysis.")
