@@ -23,22 +23,29 @@ with st.sidebar:
     """)
     st.info("AI-based Cyber Attack Detection")
 
-    # CSV Upload in Sidebar
     uploaded_file = st.file_uploader(
         "📂 Upload CSV File",
         type=["csv"],
         help="Upload network traffic dataset"
     )
 
-# ===== HEADER =====
-st.title("Cyber Attack Detection Dashboard")
-st.markdown("Analyze network data and detect security threats.")
+# ======================================
+# CENTERED HEADER SECTION
+# ======================================
+st.markdown(
+    """
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="font-size: 45px; margin-bottom: 0;">Cyber Attack Detection Dashboard</h1>
+        <p style="font-size: 18px; color: #666;">Analyze network data and detect security threats.</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 st.write("---")
 
 # ======================================
 # LOAD MODEL & UTILS
 # ======================================
-# Note: Ensure these files exist in your working directory
 try:
     model = joblib.load("attack_model.pkl")
     model_columns = joblib.load("model_columns.pkl")
@@ -55,7 +62,6 @@ if uploaded_file is not None:
 
     # ===== DASHBOARD STATS =====
     st.subheader("📊 Dataset Overview")
-
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Records", len(data))
     col2.metric("Columns", len(data.columns))
@@ -67,29 +73,20 @@ if uploaded_file is not None:
     st.subheader("Data Preview")
     st.dataframe(data.head(), use_container_width=True)
 
-    # ===== ATTACK TYPE DISTRIBUTION (IF IN DATASET) =====
     if "Attack Type" in data.columns:
         st.subheader("📈 Original Attack Distribution")
-        fig = px.pie(
-            data,
-            names="Attack Type",
-            hole=0.4,
-            color_discrete_sequence=px.colors.qualitative.Pastel
-        )
+        fig = px.pie(data, names="Attack Type", hole=0.4)
         st.plotly_chart(fig, use_container_width=True)
 
     st.write("---")
 
     # ===== PREDICTION BUTTON =====
     if st.button("🚀 Run AI Threat Analysis", use_container_width=True):
-
         with st.spinner("Analyzing network packets..."):
-            # Prepare data
             X = data.drop(columns=["Attack Type"]) if "Attack Type" in data.columns else data.copy()
             X = pd.get_dummies(X)
             X = X.reindex(columns=model_columns, fill_value=0)
 
-            # Predict
             predictions = model.predict(X)
 
             if encoder:
@@ -103,7 +100,6 @@ if uploaded_file is not None:
         st.success("✅ Analysis Completed!")
 
         # ===== MODIFIED FINAL DETECTION RESULT =====
-        # This section calculates the majority and displays it prominently
         attack_counts = Counter(predictions)
         final_attack_name = attack_counts.most_common(1)[0][0]
 
@@ -119,21 +115,21 @@ if uploaded_file is not None:
                 border: 4px solid #ff4b4b;
                 text-align: center;
                 box-shadow: 0px 4px 15px rgba(255, 75, 75, 0.2);
+                margin-bottom: 30px;
             ">
-                <p style="color: #ff4b4b; font-size: 20px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">
+                <p style="color: #ff4b4b; font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
                     🚨 Final Detection Result
                 </p>
-                <h1 style="color: #1E1E1E; font-size: 72px; margin: 0; padding: 10px 0;">
+                <h1 style="color: #1E1E1E; font-size: 80px; margin: 10px 0;">
                     {final_attack_name}
                 </h1>
-                <p style="color: #555; font-size: 16px; margin-top: 10px;">
-                    Identified as the primary threat based on <b>{attack_counts[final_attack_name]}</b> matching patterns.
+                <p style="color: #555; font-size: 16px;">
+                    Identified based on majority patterns in the dataset.
                 </p>
             </div>
             """,
             unsafe_allow_html=True
         )
-        st.markdown("<br>", unsafe_allow_html=True)
 
         # ===== PREDICTION DETAILS =====
         st.subheader("📊 Prediction Analytics")
@@ -145,11 +141,7 @@ if uploaded_file is not None:
 
         with col_right:
             st.write("**Predicted Threat Distribution**")
-            fig2 = px.pie(
-                data,
-                names="Predicted_Attack_Type",
-                color_discrete_sequence=px.colors.qualitative.Bold
-            )
+            fig2 = px.pie(data, names="Predicted_Attack_Type", color_discrete_sequence=px.colors.qualitative.Bold)
             st.plotly_chart(fig2, use_container_width=True)
 
         st.write("---")
