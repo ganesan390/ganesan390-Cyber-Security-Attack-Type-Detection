@@ -81,7 +81,7 @@ if uploaded_file is not None:
     st.write("---")
 
     # ===== PREDICTION BUTTON =====
-    if st.button("🚀 Run AI Threat Analysis", use_container_width=True):
+    if st.button("🚀 Run Threat Analysis", use_container_width=True):
         with st.spinner("Analyzing network packets..."):
             X = data.drop(columns=["Attack Type"]) if "Attack Type" in data.columns else data.copy()
             X = pd.get_dummies(X)
