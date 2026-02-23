@@ -36,11 +36,16 @@ st.markdown("Analyze network data and detect security threats.")
 st.write("---")
 
 # ======================================
-# LOAD MODEL
+# LOAD MODEL & UTILS
 # ======================================
-model = joblib.load("attack_model.pkl")
-model_columns = joblib.load("model_columns.pkl")
-encoder = joblib.load("label_encoder.pkl")
+# Note: Ensure these files exist in your working directory
+try:
+    model = joblib.load("attack_model.pkl")
+    model_columns = joblib.load("model_columns.pkl")
+    encoder = joblib.load("label_encoder.pkl")
+except Exception as e:
+    st.error(f"Error loading model files: {e}")
+    st.stop()
 
 # ======================================
 # PROCESS FILE ONLY IF UPLOADED
@@ -62,24 +67,23 @@ if uploaded_file is not None:
     st.subheader("Data Preview")
     st.dataframe(data.head(), use_container_width=True)
 
-    # ===== ATTACK TYPE DISTRIBUTION =====
+    # ===== ATTACK TYPE DISTRIBUTION (IF IN DATASET) =====
     if "Attack Type" in data.columns:
-        st.subheader("📈 Attack Type Distribution")
-
+        st.subheader("📈 Original Attack Distribution")
         fig = px.pie(
             data,
             names="Attack Type",
-            title="Attack Type Distribution"
+            hole=0.4,
+            color_discrete_sequence=px.colors.qualitative.Pastel
         )
         st.plotly_chart(fig, use_container_width=True)
 
     st.write("---")
 
     # ===== PREDICTION BUTTON =====
-    if st.button("🚀 Predict Attack Type", use_container_width=True):
+    if st.button("🚀 Run AI Threat Analysis", use_container_width=True):
 
-        with st.spinner("Analyzing data..."):
-
+        with st.spinner("Analyzing network packets..."):
             # Prepare data
             X = data.drop(columns=["Attack Type"]) if "Attack Type" in data.columns else data.copy()
             X = pd.get_dummies(X)
@@ -96,46 +100,55 @@ if uploaded_file is not None:
 
             data["Predicted_Attack_Type"] = predictions
 
-        st.success("✅ Prediction Completed!")
+        st.success("✅ Analysis Completed!")
 
-        # ===== FINAL ATTACK TYPE (MAJORITY) =====
+        # ===== MODIFIED FINAL DETECTION RESULT =====
+        # This section calculates the majority and displays it prominently
         attack_counts = Counter(predictions)
-        final_attack = attack_counts.most_common(1)[0][0]
+        final_attack_name = attack_counts.most_common(1)[0][0]
 
         st.markdown("---")
-
-        st.subheader("🛡️ Final Detection Result")
-
+        
+        # Centered Alert Box with Large Majority Name
         st.markdown(
             f"""
             <div style="
-                padding: 25px;
-                border-radius: 12px;
-                background-color: #fff4f4;
-                border: 2px solid #ff4d4d;
+                background-color: #fff5f5;
+                padding: 40px;
+                border-radius: 20px;
+                border: 4px solid #ff4b4b;
                 text-align: center;
+                box-shadow: 0px 4px 15px rgba(255, 75, 75, 0.2);
             ">
-            <h2 style="color: #ff4d4d;">🚨 Final Detected Attack Type</h2>
-            <h1>{final_attack}</h1>
-            <p style="font-size:16px;">Predicted based on majority of rows</p>
+                <p style="color: #ff4b4b; font-size: 20px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px;">
+                    🚨 Final Detection Result
+                </p>
+                <h1 style="color: #1E1E1E; font-size: 72px; margin: 0; padding: 10px 0;">
+                    {final_attack_name}
+                </h1>
+                <p style="color: #555; font-size: 16px; margin-top: 10px;">
+                    Identified as the primary threat based on <b>{attack_counts[final_attack_name]}</b> matching patterns.
+                </p>
             </div>
             """,
             unsafe_allow_html=True
         )
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        # ===== DASHBOARD RESULTS =====
-        st.subheader("Prediction Details")
+        # ===== PREDICTION DETAILS =====
+        st.subheader("📊 Prediction Analytics")
+        col_left, col_right = st.columns(2)
 
-        col1, col2 = st.columns(2)
+        with col_left:
+            st.write("**Recent Predictions Table**")
+            st.dataframe(data.head(10), use_container_width=True)
 
-        with col1:
-            st.dataframe(data.head(), use_container_width=True)
-
-        with col2:
+        with col_right:
+            st.write("**Predicted Threat Distribution**")
             fig2 = px.pie(
                 data,
                 names="Predicted_Attack_Type",
-                title="Predicted Attack Distribution"
+                color_discrete_sequence=px.colors.qualitative.Bold
             )
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -143,12 +156,12 @@ if uploaded_file is not None:
 
         # ===== DOWNLOAD =====
         st.download_button(
-            label="📥 Download Results",
+            label="📥 Download Detailed Threat Report (CSV)",
             data=data.to_csv(index=False).encode("utf-8"),
-            file_name="attack_predictions.csv",
+            file_name="threat_analysis_results.csv",
             mime="text/csv",
             use_container_width=True
         )
 
 else:
-    st.info("📂 Please upload a CSV file from the sidebar to start analysis.")
+    st.info("📂 Please upload a network traffic CSV file from the sidebar to begin analysis.")
