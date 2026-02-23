@@ -69,18 +69,6 @@ except Exception as e:
     st.error(f"Error loading model files: {e}")
     st.stop()
 
-# ======================================
-# SHOW OFFICIAL TRAINING PERFORMANCE
-# ======================================
-st.subheader("📊 Official Model Test Performance (From Training Phase)")
-
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Accuracy", model_metrics["accuracy"])
-col2.metric("F1 (Macro)", model_metrics["f1_macro"])
-col3.metric("Precision (Macro)", model_metrics["precision_macro"])
-col4.metric("Recall (Macro)", model_metrics["recall_macro"])
-
-st.write("---")
 
 # ======================================
 # HELPER FUNCTION FOR READABLE LABELS
