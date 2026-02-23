@@ -73,11 +73,21 @@ col4.metric("Recall (Macro)", model_metrics["recall_macro"])
 st.write("---")
 
 # ======================================
-# PROCESS UPLOADED FILE
+# PROCESS UPLOADED FILE (PREDICTION ONLY)
 # ======================================
 if uploaded_file is not None:
 
     data = pd.read_csv(uploaded_file)
+
+    # Convert original attack labels to readable strings (if numeric)
+    if "Attack Type" in data.columns:
+        if data["Attack Type"].dtype != "object":
+            try:
+                data["Attack Type"] = encoder.inverse_transform(
+                    data["Attack Type"].astype(int)
+                )
+            except:
+                data["Attack Type"] = data["Attack Type"].astype(str)
 
     st.subheader("📊 Uploaded Dataset Overview")
     colA, colB, colC = st.columns(3)
@@ -113,7 +123,7 @@ if uploaded_file is not None:
         st.success("✅ Prediction Completed")
 
         # ======================================
-        # ROW-WISE RESULTS (TEAM REQUIREMENT)
+        # ROW-WISE RESULTS
         # ======================================
         st.subheader("🔍 Row-wise Prediction Results")
 
@@ -126,7 +136,7 @@ if uploaded_file is not None:
         st.write("---")
 
         # ======================================
-        # PREDICTED DISTRIBUTION
+        # PREDICTED DISTRIBUTION (READABLE LABELS)
         # ======================================
         st.subheader("📈 Predicted Attack Distribution")
 
@@ -141,38 +151,36 @@ if uploaded_file is not None:
 
         st.write("---")
 
-                
-               # ======================================
+        # ======================================
         # SAFE EVALUATION BLOCK
         # ======================================
         if "Attack Type" in data.columns:
-        
+
             st.subheader("📊 Evaluation on Uploaded Dataset")
-        
+
             y_true = data["Attack Type"]
             y_pred = data["Predicted_Attack_Type"]
-        
-            # 🔥 FORCE BOTH TO STRING (Fixes mixed label error)
+
+            # Force string labels (fix mixed type errors)
             y_true = y_true.astype(str)
             y_pred = y_pred.astype(str)
-        
-            from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
-        
+
             accuracy = accuracy_score(y_true, y_pred)
             precision = precision_score(y_true, y_pred, average="macro", zero_division=0)
             recall = recall_score(y_true, y_pred, average="macro", zero_division=0)
             f1 = f1_score(y_true, y_pred, average="macro", zero_division=0)
-        
+
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("Accuracy", f"{accuracy:.4f}")
             col2.metric("Precision (Macro)", f"{precision:.4f}")
             col3.metric("Recall (Macro)", f"{recall:.4f}")
             col4.metric("F1 (Macro)", f"{f1:.4f}")
-        
+
             st.subheader("Detailed Classification Report")
             report = classification_report(y_true, y_pred, zero_division=0, output_dict=True)
             report_df = pd.DataFrame(report).transpose()
             st.dataframe(report_df.round(3), use_container_width=True)
+
         # ======================================
         # DOWNLOAD RESULTS
         # ======================================
