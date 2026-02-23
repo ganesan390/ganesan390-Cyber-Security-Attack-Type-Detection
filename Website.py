@@ -15,6 +15,16 @@ st.set_page_config(
 )
 
 # ======================================
+# LABEL MAPPING (CHANGE THESE NAMES AS NEEDED)
+# ======================================
+# Update these strings to match your dataset's actual attack names
+LABEL_MAP = {
+    0: "Normal Connection",
+    1: "DDoS Attack",
+    2: "SQL Injection / Malware"
+}
+
+# ======================================
 # SIDEBAR
 # ======================================
 with st.sidebar:
@@ -73,21 +83,28 @@ col4.metric("Recall (Macro)", model_metrics["recall_macro"])
 st.write("---")
 
 # ======================================
-# PROCESS UPLOADED FILE (PREDICTION ONLY)
+# HELPER FUNCTION FOR READABLE LABELS
+# ======================================
+def make_readable(val):
+    """Converts numeric predictions/labels to text using Map or Encoder."""
+    try:
+        # Try manual map first
+        if int(val) in LABEL_MAP:
+            return LABEL_MAP[int(val)]
+        # Try inverse transform from encoder
+        return encoder.inverse_transform([int(val)])[0]
+    except:
+        return str(val)
+
+# ======================================
+# PROCESS UPLOADED FILE
 # ======================================
 if uploaded_file is not None:
-
     data = pd.read_csv(uploaded_file)
 
-    # Convert original attack labels to readable strings (if numeric)
+    # Convert existing 'Attack Type' column to readable names if it exists
     if "Attack Type" in data.columns:
-        if data["Attack Type"].dtype != "object":
-            try:
-                data["Attack Type"] = encoder.inverse_transform(
-                    data["Attack Type"].astype(int)
-                )
-            except:
-                data["Attack Type"] = data["Attack Type"].astype(str)
+        data["Attack Type"] = data["Attack Type"].apply(make_readable)
 
     st.subheader("📊 Uploaded Dataset Overview")
     colA, colB, colC = st.columns(3)
@@ -96,29 +113,22 @@ if uploaded_file is not None:
     colC.metric("Missing Values", data.isnull().sum().sum())
 
     st.write("---")
-
     st.subheader("Preview of Uploaded Data")
     st.dataframe(data.head(10), use_container_width=True)
-
     st.write("---")
 
     if st.button("🚀 Run Threat Analysis", use_container_width=True):
-
         with st.spinner("Running predictions..."):
-
+            # Prepare Features
             X = data.drop(columns=["Attack Type"]) if "Attack Type" in data.columns else data.copy()
             X = pd.get_dummies(X)
             X = X.reindex(columns=model_columns, fill_value=0)
 
-            predictions = model.predict(X)
-
-            # Convert predictions to readable labels
-            try:
-                predictions = encoder.inverse_transform(predictions)
-            except:
-                predictions = predictions.astype(str)
-
-            data["Predicted_Attack_Type"] = predictions
+            # Predict
+            raw_predictions = model.predict(X)
+            
+            # Map predictions to names
+            data["Predicted_Attack_Type"] = [make_readable(p) for p in raw_predictions]
 
         st.success("✅ Prediction Completed")
 
@@ -126,10 +136,8 @@ if uploaded_file is not None:
         # ROW-WISE RESULTS
         # ======================================
         st.subheader("🔍 Row-wise Prediction Results")
-
         if "Attack Type" in data.columns:
-            comparison_df = data[["Attack Type", "Predicted_Attack_Type"]]
-            st.dataframe(comparison_df, use_container_width=True)
+            st.dataframe(data[["Attack Type", "Predicted_Attack_Type"]], use_container_width=True)
         else:
             st.dataframe(data[["Predicted_Attack_Type"]], use_container_width=True)
 
@@ -140,46 +148,45 @@ if uploaded_file is not None:
         # ======================================
         st.subheader("📈 Predicted Attack Distribution")
 
-        distribution = Counter(predictions)
-        dist_df = pd.DataFrame(distribution.items(), columns=["Attack Type", "Count"])
-        dist_df["Percentage (%)"] = (dist_df["Count"] / len(data) * 100).round(2)
+        counts = data["Predicted_Attack_Type"].value_counts().reset_index()
+        counts.columns = ["Attack Type", "Count"]
+        counts["Percentage (%)"] = (counts["Count"] / len(data) * 100).round(2)
 
-        st.dataframe(dist_df, use_container_width=True)
+        # Show Table
+        st.dataframe(counts, use_container_width=True)
 
-        fig = px.pie(dist_df, names="Attack Type", values="Count")
+        # Show Chart
+        fig = px.pie(
+            counts, 
+            names="Attack Type", 
+            values="Count",
+            color="Attack Type",
+            hole=0.4,
+            title="Distribution of Detected Threats"
+        )
         st.plotly_chart(fig, use_container_width=True)
 
         st.write("---")
 
         # ======================================
-        # SAFE EVALUATION BLOCK
+        # EVALUATION BLOCK
         # ======================================
         if "Attack Type" in data.columns:
-
             st.subheader("📊 Evaluation on Uploaded Dataset")
 
-            y_true = data["Attack Type"]
-            y_pred = data["Predicted_Attack_Type"]
+            y_true = data["Attack Type"].astype(str)
+            y_pred = data["Predicted_Attack_Type"].astype(str)
 
-            # Force string labels (fix mixed type errors)
-            y_true = y_true.astype(str)
-            y_pred = y_pred.astype(str)
-
-            accuracy = accuracy_score(y_true, y_pred)
-            precision = precision_score(y_true, y_pred, average="macro", zero_division=0)
-            recall = recall_score(y_true, y_pred, average="macro", zero_division=0)
+            acc = accuracy_score(y_true, y_pred)
             f1 = f1_score(y_true, y_pred, average="macro", zero_division=0)
 
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Accuracy", f"{accuracy:.4f}")
-            col2.metric("Precision (Macro)", f"{precision:.4f}")
-            col3.metric("Recall (Macro)", f"{recall:.4f}")
-            col4.metric("F1 (Macro)", f"{f1:.4f}")
+            m1, m2 = st.columns(2)
+            m1.metric("Current Accuracy", f"{acc:.4f}")
+            m2.metric("Current F1-Score", f"{f1:.4f}")
 
             st.subheader("Detailed Classification Report")
             report = classification_report(y_true, y_pred, zero_division=0, output_dict=True)
-            report_df = pd.DataFrame(report).transpose()
-            st.dataframe(report_df.round(3), use_container_width=True)
+            st.dataframe(pd.DataFrame(report).transpose().round(3), use_container_width=True)
 
         # ======================================
         # DOWNLOAD RESULTS
