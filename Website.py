@@ -1,193 +1,381 @@
 import streamlit as st
+
 import pandas as pd
+
 import joblib
+
 import plotly.express as px
-from sklearn.metrics import accuracy_score, f1_score, classification_report
+
+from collections import Counter
+
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
+
+
 
 # ======================================
+
 # PAGE CONFIG
+
 # ======================================
+
 st.set_page_config(
+
     page_title="Cyber Attack Dashboard",
+
     page_icon="🛡️",
+
     layout="wide"
+
 )
 
+
+
 # ======================================
-# LABEL MAPPING (Aligned with Image)
+
+# LABEL MAPPING (CHANGE THESE NAMES AS NEEDED)
+
 # ======================================
+
+# Update these strings to match your dataset's actual attack names
+
 LABEL_MAP = {
+
     0: "Malware",
+
     1: "DDoS",
+
     2: "Intrusion"
+
 }
 
+
+
 # ======================================
+
 # SIDEBAR
+
 # ======================================
+
 with st.sidebar:
+
     st.title("🛡️ Cyber Dashboard")
+
     st.markdown("""
+
     - Upload dataset
+
     - View analytics
+
     - Predict attacks
+
     - View model evaluation
+
     """)
+
     st.info("AI-based Cyber Attack Detection")
 
+
+
     uploaded_file = st.file_uploader(
+
         "📂 Upload CSV File",
+
         type=["csv"]
+
     )
 
+
+
 # ======================================
+
 # HEADER
+
 # ======================================
+
 st.markdown(
+
     """
+
     <div style="text-align:center;">
+
         <h1>Cyber Attack Detection Dashboard</h1>
+
         <p>Analyze network data and detect security threats</p>
+
     </div>
+
     """,
+
     unsafe_allow_html=True
+
 )
+
+
 
 st.write("---")
 
-# ======================================
-# LOAD MODEL ARTIFACTS
-# ======================================
-@st.cache_resource
-def load_model_files():
-    try:
-        model = joblib.load("attack_model.pkl")
-        model_columns = joblib.load("model_columns.pkl")
-        encoder = joblib.load("label_encoder.pkl")
-        return model, model_columns, encoder
-    except Exception as e:
-        st.error(f"Error loading model files: {e}")
-        return None, None, None
 
-model, model_columns, encoder = load_model_files()
 
-if model is None:
+# ======================================
+
+# LOAD MODEL + METRICS
+
+# ======================================
+
+try:
+
+    model = joblib.load("attack_model.pkl")
+
+    model_columns = joblib.load("model_columns.pkl")
+
+    encoder = joblib.load("label_encoder.pkl")
+
+    model_metrics = joblib.load("model_metrics.pkl")
+
+except Exception as e:
+
+    st.error(f"Error loading model files: {e}")
+
     st.stop()
 
+
+
+
+
 # ======================================
+
 # HELPER FUNCTION FOR READABLE LABELS
+
 # ======================================
+
 def make_readable(val):
-    """Converts numeric predictions/labels to text using strict mapping."""
+
+    """Converts numeric predictions/labels to text using Map or Encoder."""
+
     try:
-        val_int = int(float(val))
-        if val_int in LABEL_MAP:
-            return LABEL_MAP[val_int]
-        # Fallback to encoder or return original if mapping fails
-        return encoder.inverse_transform([val_int])[0]
+
+        # Try manual map first
+
+        if int(val) in LABEL_MAP:
+
+            return LABEL_MAP[int(val)]
+
+        # Try inverse transform from encoder
+
+        return encoder.inverse_transform([int(val)])[0]
+
     except:
-        # Special case for "Normal Connection" if it's in your dataset
-        if str(val).lower() == 'normal' or val == 3: # Assuming 3 or 'normal' is baseline
-            return "Normal Connection"
+
         return str(val)
 
+
+
 # ======================================
+
 # PROCESS UPLOADED FILE
+
 # ======================================
+
 if uploaded_file is not None:
+
     data = pd.read_csv(uploaded_file)
-    
-    # Store labels for evaluation, then drop from visual preview
-    actual_labels = None
+
+
+
+    # Convert existing 'Attack Type' column to readable names if it exists
+
     if "Attack Type" in data.columns:
-        actual_labels = data["Attack Type"].copy()
+
+        data["Attack Type"] = data["Attack Type"].apply(make_readable)
+
+
 
     st.subheader("📊 Uploaded Dataset Overview")
+
     colA, colB, colC = st.columns(3)
+
     colA.metric("Total Rows", len(data))
-    
-    # PREVIEW LOGIC: Remove 'Attack Type' from display
-    preview_df = data.drop(columns=["Attack Type"]) if "Attack Type" in data.columns else data.copy()
-    
-    colB.metric("Feature Columns", len(preview_df.columns))
+
+    colB.metric("Columns", len(data.columns))
+
     colC.metric("Missing Values", data.isnull().sum().sum())
 
+
+
     st.write("---")
-    st.subheader("Preview of Uploaded Data (Features Only)")
-    st.dataframe(preview_df.head(10), use_container_width=True)
+
+    st.subheader("Preview of Uploaded Data")
+
+    st.dataframe(data.head(10), use_container_width=True)
+
     st.write("---")
+
+
 
     if st.button("🚀 Run Threat Analysis", use_container_width=True):
-        with st.spinner("Analyzing network patterns..."):
+
+        with st.spinner("Running predictions..."):
+
             # Prepare Features
-            X = preview_df.copy()
+
+            X = data.drop(columns=["Attack Type"]) if "Attack Type" in data.columns else data.copy()
+
             X = pd.get_dummies(X)
+
             X = X.reindex(columns=model_columns, fill_value=0)
 
+
+
             # Predict
+
             raw_predictions = model.predict(X)
+
             
+
             # Map predictions to names
+
             data["Predicted_Attack_Type"] = [make_readable(p) for p in raw_predictions]
 
-        st.success("✅ Analysis Completed")
+
+
+        st.success("✅ Prediction Completed")
+
+
 
         # ======================================
-        # VISUALIZATION
+
+        # ROW-WISE RESULTS
+
         # ======================================
-        st.subheader("📈 Predicted Threat Distribution")
+
+        st.subheader("🔍 Row-wise Prediction Results")
+
+        if "Attack Type" in data.columns:
+
+            st.dataframe(data[["Attack Type", "Predicted_Attack_Type"]], use_container_width=True)
+
+        else:
+
+            st.dataframe(data[["Predicted_Attack_Type"]], use_container_width=True)
+
+
+
+        st.write("---")
+
+
+
+        # ======================================
+
+        # PREDICTED DISTRIBUTION (READABLE LABELS)
+
+        # ======================================
+
+        st.subheader("📈 Predicted Attack Distribution")
+
+
+
         counts = data["Predicted_Attack_Type"].value_counts().reset_index()
+
         counts.columns = ["Attack Type", "Count"]
-        
+
+        counts["Percentage (%)"] = (counts["Count"] / len(data) * 100).round(2)
+
+
+
+        # Show Table
+
+        st.dataframe(counts, use_container_width=True)
+
+
+
+        # Show Chart
+
         fig = px.pie(
+
             counts, 
+
             names="Attack Type", 
+
             values="Count",
-            hole=0.4,
+
             color="Attack Type",
-            color_discrete_map={
-                "SQL Injection / Malware": "#EF553B", 
-                "DDoS Attack": "#636EFA", 
-                "Intrusion": "#00CC96",
-                "Normal Connection": "#AB63FA"
-            },
+
+            hole=0.4,
+
             title="Distribution of Detected Threats"
+
         )
+
         st.plotly_chart(fig, use_container_width=True)
 
+
+
+        st.write("---")
+
+
+
         # ======================================
-        # EVALUATION (Comparing Ground Truth if exists)
+
+        # EVALUATION BLOCK
+
         # ======================================
-        if actual_labels is not None:
-            st.write("---")
-            st.subheader("📊 Model Performance Evaluation")
-            
-            y_true = [make_readable(x) for x in actual_labels]
-            y_pred = data["Predicted_Attack_Type"].tolist()
+
+        if "Attack Type" in data.columns:
+
+            st.subheader("📊 Evaluation on Uploaded Dataset")
+
+
+
+            y_true = data["Attack Type"].astype(str)
+
+            y_pred = data["Predicted_Attack_Type"].astype(str)
+
+
 
             acc = accuracy_score(y_true, y_pred)
+
             f1 = f1_score(y_true, y_pred, average="macro", zero_division=0)
 
+
+
             m1, m2 = st.columns(2)
-            m1.metric("Detection Accuracy", f"{acc:.2%}")
-            m2.metric("F1-Score", f"{f1:.4f}")
+
+            m1.metric("Current Accuracy", f"{acc:.4f}")
+
+            m2.metric("Current F1-Score", f"{f1:.4f}")
+
+
+
+            st.subheader("Detailed Classification Report")
+
+            report = classification_report(y_true, y_pred, zero_division=0, output_dict=True)
+
+            st.dataframe(pd.DataFrame(report).transpose().round(3), use_container_width=True)
+
+
 
         # ======================================
-        # RESULTS TABLE
+
+        # DOWNLOAD RESULTS
+
         # ======================================
-        st.write("---")
-        st.subheader("🔍 Detailed Results (Predictions)")
-        
-        # Displaying predictions in the exact style of your image
-        st.dataframe(data[["Predicted_Attack_Type"]].head(20), use_container_width=True)
 
         st.download_button(
-            "📥 Download Threat Analysis Results",
+
+            "📥 Download Full Results",
+
             data=data.to_csv(index=False).encode("utf-8"),
-            file_name="threat_analysis_report.csv",
+
+            file_name="threat_analysis_results.csv",
+
             mime="text/csv",
+
             use_container_width=True
+
         )
 
+
+
 else:
-    st.info("📂 Please upload a CSV file from the sidebar to begin threat detection.")
+
+    st.info("📂 Upload a CSV file from the sidebar to begin analysis.")
